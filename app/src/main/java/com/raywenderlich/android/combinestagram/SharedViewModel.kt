@@ -35,6 +35,7 @@ import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.ViewModel
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.util.Log
 import android.widget.ImageView
@@ -50,6 +51,7 @@ import java.io.OutputStream
 class SharedViewModel : ViewModel() {
 
   private val selectedPhotos = MutableLiveData<List<Photo>>()
+  private val thumbnailStatus = MutableLiveData<ThumbnailStatus>()
   private val subscriptions = CompositeDisposable()
   private val imagesSubject: BehaviorSubject<MutableList<Photo>> = BehaviorSubject.createDefault(mutableListOf())
 
@@ -59,16 +61,15 @@ class SharedViewModel : ViewModel() {
     })
   }
 
-  fun getSelectedPhotos(): LiveData<List<Photo>> {
-    return selectedPhotos
-  }
+  fun getSelectedPhotos(): LiveData<List<Photo>> = selectedPhotos
+  fun getThumbnailStatus(): LiveData<ThumbnailStatus> = thumbnailStatus
 
   override fun onCleared() {
     subscriptions.dispose()
     super.onCleared()
   }
 
-  fun addPhoto(photo: Photo) {
+  private fun addPhoto(photo: Photo) {
     imagesSubject.value.add(photo)
     imagesSubject.onNext(imagesSubject.value)
   }
@@ -78,17 +79,32 @@ class SharedViewModel : ViewModel() {
   }
 
   fun subscribeSelectedPhotos(fragment: PhotosBottomDialogFragment) {
-    subscriptions.add(fragment.selectedPhotos
-      .doOnComplete {
-        Log.v("SharedViewModel", "Completed selecting photos")
-      }
-      .subscribe {
-        addPhoto(it)
-      })
+    val newPhotos = fragment.selectedPhotos.share()
+
+    subscriptions.add(newPhotos
+        .doOnComplete {
+          Log.v("SharedViewModel", "Completed selecting photos")
+        }
+        .filter {newImage ->
+          val bitmap = BitmapFactory.decodeResource(fragment.resources, newImage.drawable)
+          bitmap.width > bitmap.height
+        }
+        .filter { newImage ->
+          !(imagesSubject.value.map { it.drawable }.contains(newImage.drawable))
+        }
+        .subscribe {
+          addPhoto(it)
+        })
+
+    subscriptions.add(newPhotos
+        .ignoreElements()
+        .subscribe {
+          thumbnailStatus.postValue(ThumbnailStatus.READY)
+        })
   }
 
   fun saveBitmapFromImageView(imageView: ImageView, context: Context):
-    Single<String> {
+      Single<String> {
     return Single.create { observer ->
       val tmpImg = "${System.currentTimeMillis()}.png"
 
