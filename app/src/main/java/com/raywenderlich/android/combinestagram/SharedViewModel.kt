@@ -40,12 +40,14 @@ import android.graphics.drawable.BitmapDrawable
 import android.util.Log
 import android.widget.ImageView
 import io.reactivex.Single
+import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.subjects.BehaviorSubject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
+import java.util.concurrent.TimeUnit
 
 
 class SharedViewModel : ViewModel() {
@@ -95,6 +97,7 @@ class SharedViewModel : ViewModel() {
         .filter { newImage ->
           !(imagesSubject.value.map { it.drawable }.contains(newImage.drawable))
         }
+        .debounce(250, TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
         .subscribe {
           addPhoto(it)
         })
