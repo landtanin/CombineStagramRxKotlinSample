@@ -36,6 +36,10 @@ import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
+import android.widget.Toast
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.rxkotlin.subscribeBy
+import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_main.*
 
 
@@ -63,7 +67,7 @@ class MainActivity : AppCompatActivity() {
       actionSave()
     }
 
-    viewModel.getSelectedPhotos().observe(this, Observer {photos ->
+    viewModel.getSelectedPhotos().observe(this, Observer { photos ->
       photos?.let {
         if (photos.isNotEmpty()) {
           val bitmaps = photos.map { BitmapFactory.decodeResource(resources, it.drawable) }
@@ -102,6 +106,17 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun actionSave() {
-    println("actionSave")
+    viewModel.saveBitmapFromImageView(collageImage, this)
+        .subscribeOn(Schedulers.io())                 // save on background thread
+        .observeOn(AndroidSchedulers.mainThread())    // show the result on main threadd
+        .subscribeBy(
+            onSuccess = { file ->
+              Toast.makeText(this, "$file saved", Toast.LENGTH_SHORT).show()
+            },
+            onError = { e ->
+              Toast.makeText(this, "Error saving file: ${e.localizedMessage}",
+                  Toast.LENGTH_SHORT).show()
+            }
+        )
   }
 }
