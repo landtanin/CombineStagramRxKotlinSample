@@ -85,6 +85,9 @@ class SharedViewModel : ViewModel() {
         .doOnComplete {
           Log.v("SharedViewModel", "Completed selecting photos")
         }
+        .takeWhile {
+          imagesSubject.value.size < 6
+        }
         .filter {newImage ->
           val bitmap = BitmapFactory.decodeResource(fragment.resources, newImage.drawable)
           bitmap.width > bitmap.height
