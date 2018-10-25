@@ -85,6 +85,12 @@ class MainActivity : AppCompatActivity() {
         thumbnail.setImageDrawable(collageImage.drawable)
       }
     })
+
+    viewModel.getCollageStatus().observe(this, Observer { status ->
+      if (status == CollageStatus.COMPLETE) {
+        Toast.makeText(this, "Cannot add more than 6 photos", Toast.LENGTH_SHORT).show()
+      }
+    })
   }
 
   private fun updateUI(photos: List<Photo>) {
@@ -108,6 +114,7 @@ class MainActivity : AppCompatActivity() {
   private fun actionClear() {
     viewModel.clearPhotos()
     collageImage.setImageResource(android.R.color.transparent)
+    thumbnail.setImageResource(android.R.color.transparent)
     updateUI(listOf())
   }
 
