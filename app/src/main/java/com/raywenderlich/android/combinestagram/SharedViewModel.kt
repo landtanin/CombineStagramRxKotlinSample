@@ -103,12 +103,29 @@ class SharedViewModel : ViewModel() {
           val bitmap = BitmapFactory.decodeResource(fragment.resources, newImage.drawable)
           bitmap.width > bitmap.height
         }
-        .filter { newImage ->
-          !(imagesSubject.value.map { it.drawable }.contains(newImage.drawable))
+//        .filter { newImage ->
+//          !(imagesSubject.value.map { it.drawable }.contains(newImage.drawable))
+//        }
+        .map { newImage ->
+          val photoOperation = if (imagesSubject.value.map { it.drawable }
+                  .contains(newImage.drawable)) {
+            PhotoOperation.REMOVE
+          } else {
+            PhotoOperation.ADD
+          }
+          Pair(newImage, photoOperation)
         }
         .debounce(250, TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
-        .subscribe {
-          addPhoto(it)
+        .subscribe { photoWithOperation ->
+          when (photoWithOperation.second) {
+            PhotoOperation.ADD -> {
+              imagesSubject.value.add(photoWithOperation.first)
+            }
+            PhotoOperation.REMOVE -> {
+              imagesSubject.value.remove(photoWithOperation.first)
+            }
+          }
+          imagesSubject.onNext(imagesSubject.value)
         })
 
     subscriptions.add(newPhotos
